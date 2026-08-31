@@ -18,6 +18,9 @@ export interface AgentEngineConfig {
   timeZone?: string;
   /** Extra standing instructions appended to the system prompt. */
   extraInstructions?: string;
+  /** JARVIS-style persona for the on-device model. */
+  persona?: 'jarvis' | 'standard';
+  honorific?: string;
 }
 
 export class AgentEngine {
@@ -43,6 +46,7 @@ export class AgentEngine {
       this.toolContext.now(),
       this.config.timeZone,
       this.config.extraInstructions,
+      { style: this.config.persona, honorific: this.config.honorific },
     );
 
     const budget = Math.floor(

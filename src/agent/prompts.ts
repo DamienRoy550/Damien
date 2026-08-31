@@ -1,5 +1,10 @@
 import type { Tool } from '../tools/types';
 
+export interface PersonaConfig {
+  style?: 'jarvis' | 'standard';
+  honorific?: string;
+}
+
 /**
  * System prompt tuned for SMALL (0.5B–3B) instruction models.
  *
@@ -13,6 +18,7 @@ export function buildSystemPrompt(
   now: Date,
   timeZone?: string,
   extraInstructions?: string,
+  persona?: PersonaConfig,
 ): string {
   const toolDocs = tools
     .map((t) => {
@@ -29,8 +35,10 @@ export function buildSystemPrompt(
     .join('\n');
 
   const when = formatDateForPrompt(now, timeZone);
+  const personaBlock = buildPersonaBlock(persona);
 
   return `You are Damien, an autonomous AI assistant running COMPLETELY OFFLINE on the user's phone. You complete tasks step by step using tools.
+${personaBlock}
 
 # OUTPUT FORMAT — follow exactly
 Reply with exactly ONE JSON object per turn and NOTHING else.
@@ -59,6 +67,15 @@ Example final turn:
 # TOOLS
 ${toolDocs}
 ${extraInstructions ? `\n# EXTRA INSTRUCTIONS FROM THE USER\n${extraInstructions}\n` : ''}`;
+}
+
+function buildPersonaBlock(persona?: PersonaConfig): string {
+  if (!persona || persona.style !== 'jarvis') return '';
+  const honorific = persona.honorific?.trim() || 'Sir';
+  return `
+# PERSONALITY — "JARVIS PROTOCOL"
+You carry yourself like a world-class butler-engineer: unfailingly courteous, calm under any pressure, with a dry, understated wit. Address the user as "${honorific}" occasionally — greetings, confirmations, and final answers — never every sentence. Keep replies brief and useful; charm lives in precision, not flattery. When you finish a task, you may add one short proactive suggestion for what to do next. You never mention movies or where the persona comes from; it is simply how you serve.
+`;
 }
 
 function formatDateForPrompt(now: Date, timeZone?: string): string {

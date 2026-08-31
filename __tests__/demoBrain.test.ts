@@ -97,26 +97,56 @@ describe('demo brain speaks the wire protocol', () => {
 });
 
 describe('demo brain conversation', () => {
-  it('greets like a person', () => {
+  it('greets with time-awareness and the honorific', () => {
     const a = answer(demoBrain({ messages: user('hello') }));
-    expect(a.answer.toLowerCase()).toContain('hey');
+    expect(a.answer).toMatch(/Good (morning|afternoon|evening)/);
+    expect(a.answer).toContain('Sir');
   });
 
-  it('introduces itself', () => {
+  it('confirms presence in style', () => {
+    const a = answer(demoBrain({ messages: user('are you there?') }));
+    expect(a.answer.toLowerCase()).toContain('always');
+  });
+
+  it('introduces itself with the persona', () => {
     const a = answer(demoBrain({ messages: user('who are you?') }));
     expect(a.answer).toContain('Damien');
-    expect(a.answer.toLowerCase()).toContain('offline');
+    expect(a.answer.toLowerCase()).toContain('on-device');
+    expect(a.answer).toContain('Sir');
   });
 
   it('lists capabilities on "help"', () => {
     const a = answer(demoBrain({ messages: user('what can you do?') }));
     expect(a.answer).toContain('Math');
-    expect(a.answer).toContain('note');
+    expect(a.answer).toContain('Diagnostics');
   });
 
-  it('says thanks gracefully', () => {
+  it('routes "run diagnostics" to system_status', () => {
+    const r = reply(demoBrain({ messages: user('run diagnostics') }));
+    expect(r.tool).toBe('system_status');
+  });
+
+  it('routes "status report" to system_status', () => {
+    const r = reply(demoBrain({ messages: user('give me a status report') }));
+    expect(r.tool).toBe('system_status');
+  });
+
+  it('reports diagnostics observations as a report', () => {
+    const a = answer(
+      demoBrain({
+        messages: [
+          { role: 'user', content: 'run diagnostics' },
+          { role: 'user', content: '[OBSERVATION] DAMIEN OS v0.1.0 — all systems operational\nTools armed: 15' },
+        ],
+      }),
+    );
+    expect(a.answer).toContain('Diagnostic complete');
+    expect(a.answer).toContain('Tools armed: 15');
+  });
+
+  it('says thanks graciously', () => {
     const a = answer(demoBrain({ messages: user('thanks!') }));
-    expect(a.answer.toLowerCase()).toContain('anytime');
+    expect(a.answer.toLowerCase()).toContain('pleasure');
   });
 
   it('is honest about open-ended questions', () => {
@@ -129,7 +159,7 @@ describe('demo brain conversation', () => {
       demoBrain({
         messages: [
           { role: 'user', content: 'hello' },
-          { role: 'assistant', content: 'Hi! What can I do?' },
+          { role: 'assistant', content: 'Good evening, Sir.' },
           { role: 'user', content: 'What is 6*7?' },
         ],
       }),
@@ -167,7 +197,7 @@ describe('demo brain conversation', () => {
     expect(second.answer).toContain('144');
   });
 
-  it('apologizes honestly on tool errors', () => {
+  it('apologizes with charm on tool errors', () => {
     const second = answer(
       demoBrain({
         messages: [
@@ -176,6 +206,6 @@ describe('demo brain conversation', () => {
         ],
       }),
     );
-    expect(second.answer).toContain('problem');
+    expect(second.answer).toContain('complication');
   });
 });

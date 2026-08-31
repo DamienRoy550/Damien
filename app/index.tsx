@@ -15,7 +15,10 @@ import { theme } from '../src/theme';
 import { RunBlock } from '../src/components/RunBlock';
 import { useRuns } from '../src/state/runs';
 import { useModels } from '../src/state/models';
+import { useSettings } from '../src/state/settings';
 import { startTask, cancelActiveTask } from '../src/runtime';
+import { useVoiceInput } from '../src/hooks/useVoiceInput';
+import { setSpeechEnabled, stopSpeaking } from '../src/services/speech';
 
 const SUGGESTIONS = [
   'What is 234 * 17 + sqrt(961)?',
@@ -23,38 +26,69 @@ const SUGGESTIONS = [
   'Take a note: buy oat milk tomorrow',
   'Remind me to stretch in 45 minutes',
   'Open youtube.com',
-  'Fetch https://example.com and summarize it',
+  'Run diagnostics',
 ];
+
+function bootGreeting(honorific: string): string {
+  const h = new Date().getHours();
+  const tod = h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 18 ? 'afternoon' : 'evening';
+  return `Good ${tod}, ${honorific}. All systems are online — how may I be of service?`;
+}
 
 export default function ChatScreen() {
   const runs = useRuns((s) => s.runs);
   const modelsHydrated = useModels((s) => s.hydrated);
   const installed = useModels((s) => s.installed);
   const selectedModelId = useModels((s) => s.selectedModelId);
+  const voiceOut = useSettings((s) => s.voiceOut);
+  const persona = useSettings((s) => s.persona);
+  const honorific = useSettings((s) => s.honorific);
+  const updateSettings = useSettings((s) => s.update);
+
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList>(null);
 
   const running = runs.some((r) => r.status === 'running');
   const isWeb = Platform.OS === 'web';
+  const jarvis = persona === 'jarvis';
   const hasModel = isWeb || (selectedModelId !== null && installed[selectedModelId] !== undefined);
-
-  const data = useMemo(() => runs.slice().reverse(), [runs]);
-
-  useEffect(() => {
-    // keep the newest content visible
-    const t = setTimeout(() => listRef.current?.scrollToOffset({ offset: 999999, animated: true }), 60);
-    return () => clearTimeout(t);
-  }, [runs.length, running]);
 
   const send = useCallback(
     (text?: string) => {
       const task = (text ?? input).trim();
       if (!task || running) return;
       setInput('');
+      stopSpeaking();
       void startTask(task);
     },
     [input, running],
   );
+
+  const voice = useVoiceInput((finalText) => {
+    setInput(finalText);
+    send(finalText);
+  });
+
+  const data = useMemo(() => runs.slice().reverse(), [runs]);
+
+  useEffect(() => {
+    const t = setTimeout(
+      () => listRef.current?.scrollToOffset({ offset: 999999, animated: true }),
+      60,
+    );
+    return () => clearTimeout(t);
+  }, [runs.length, running]);
+
+  useEffect(() => {
+    setSpeechEnabled(voiceOut);
+  }, [voiceOut]);
+
+  const toggleVoiceOut = useCallback(() => {
+    const next = !voiceOut;
+    updateSettings({ voiceOut: next });
+    setSpeechEnabled(next);
+    if (!next) stopSpeaking();
+  }, [voiceOut, updateSettings]);
 
   return (
     <KeyboardAvoidingView
@@ -67,19 +101,25 @@ export default function ChatScreen() {
           <Text style={styles.logo}>◆</Text>
           <View>
             <Text style={styles.title}>Damien</Text>
-            <Text style={styles.subtitle}>
-              {isWeb
-                ? 'demo mode · simulated on-device brain'
-                : selectedModelId
-                  ? 'offline AI agent'
-                  : 'no model installed'}
-            </Text>
+            <View style={styles.statusRow}>
+              <View style={[styles.statusDot, running ? styles.statusDotBusy : styles.statusDotOnline]} />
+              <Text style={styles.subtitle}>
+                {running
+                  ? 'working…'
+                  : isWeb
+                    ? `online · demo brain${jarvis ? ` · “${honorific}” protocol` : ''}`
+                    : selectedModelId
+                      ? 'online · on-device'
+                      : 'awaiting model'}
+              </Text>
+            </View>
           </View>
         </View>
         <View style={styles.headerActions}>
+          <HeaderButton label={voiceOut ? '🔊' : '🔇'} onPress={toggleVoiceOut} accessibilityLabel="Toggle voice output" />
           <HeaderButton label="Setup" onPress={() => router.push('/setup')} />
-          <HeaderButton label="History" onPress={() => router.push('/history')} />
-          <HeaderButton label="Settings" onPress={() => router.push('/settings')} />
+          <HeaderButton label="☰" onPress={() => router.push('/history')} accessibilityLabel="History" />
+          <HeaderButton label="⚙" onPress={() => router.push('/settings')} accessibilityLabel="Settings" />
         </View>
       </View>
 
@@ -96,16 +136,42 @@ export default function ChatScreen() {
           data={data}
           keyExtractor={(r) => r.id}
           renderItem={({ item }) => <RunBlock run={item} />}
-          ListEmptyComponent={<EmptyState onPick={send} isWeb={isWeb} />}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <View style={[styles.bubble, styles.bootBubble]}>
+                <Text style={styles.agentText}>{bootGreeting(honorific)}</Text>
+              </View>
+              <EmptyState onPick={send} isWeb={isWeb} />
+            </View>
+          }
           contentContainerStyle={styles.listContent}
           maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         />
       )}
 
+      {voice.error ? (
+        <Text style={styles.voiceError}>{voice.error}</Text>
+      ) : null}
+
       <View style={styles.inputBar}>
+        {voice.supported ? (
+          <Pressable
+            onPress={voice.listening ? voice.stop : voice.start}
+            style={[styles.micBtn, voice.listening && styles.micActive]}
+            accessibilityLabel={voice.listening ? 'Stop listening' : 'Start voice input'}
+          >
+            <Text style={styles.micTxt}>{voice.listening ? '◉' : '🎙'}</Text>
+          </Pressable>
+        ) : null}
         <TextInput
           style={styles.input}
-          placeholder={running ? 'Damien is working…' : 'Give Damien a task…'}
+          placeholder={
+            voice.listening
+              ? 'Listening…'
+              : running
+                ? 'Damien is working…'
+                : `Give ${jarvis ? 'Damien a task, ' + honorific : 'Damien a task…'}`
+          }
           placeholderTextColor={theme.faint}
           value={input}
           onChangeText={setInput}
@@ -131,9 +197,17 @@ export default function ChatScreen() {
   );
 }
 
-function HeaderButton({ label, onPress }: { label: string; onPress: () => void }) {
+function HeaderButton({
+  label,
+  onPress,
+  accessibilityLabel,
+}: {
+  label: string;
+  onPress: () => void;
+  accessibilityLabel?: string;
+}) {
   return (
-    <Pressable onPress={onPress} style={styles.headerBtn}>
+    <Pressable onPress={onPress} style={styles.headerBtn} accessibilityLabel={accessibilityLabel}>
       <Text style={styles.headerBtnTxt}>{label}</Text>
     </Pressable>
   );
@@ -161,11 +235,11 @@ function GetStartedCard() {
 function EmptyState({ onPick, isWeb }: { onPick: (t: string) => void; isWeb: boolean }) {
   return (
     <View style={styles.empty}>
-      <Text style={styles.emptyTitle}>Give me a task</Text>
+      <Text style={styles.emptyTitle}>At your service</Text>
       <Text style={styles.emptyBody}>
         {isWeb
-          ? 'You are in the web demo — the brain is simulated, but every tool, step and result below is real.'
-          : 'I plan, call tools, check results and iterate — all on-device.'}
+          ? 'Web demo — the brain is simulated, but every tool, step and result is real. Tap the mic to speak, or try:'
+          : 'I plan, call tools, check results and iterate — all on-device. Tap the mic or try:'}
       </Text>
       <View style={styles.chips}>
         {SUGGESTIONS.map((s) => (
@@ -195,12 +269,16 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   logo: { color: theme.accent, fontSize: 22 },
   title: { color: theme.text, fontSize: 18, fontWeight: '800' },
-  subtitle: { color: theme.faint, fontSize: 11, marginTop: 1 },
-  headerActions: { flexDirection: 'row', gap: 6 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusDotOnline: { backgroundColor: theme.teal },
+  statusDotBusy: { backgroundColor: theme.warn },
+  subtitle: { color: theme.faint, fontSize: 11 },
+  headerActions: { flexDirection: 'row', gap: 5 },
   headerBtn: {
     backgroundColor: theme.surface,
     borderRadius: 999,
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 6,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.border,
@@ -208,6 +286,22 @@ const styles = StyleSheet.create({
   headerBtnTxt: { color: theme.dim, fontSize: 12, fontWeight: '600' },
   list: { flex: 1 },
   listContent: { paddingVertical: 12 },
+  emptyWrap: { gap: 8 },
+  bubble: {
+    borderRadius: theme.radius,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  bootBubble: {
+    backgroundColor: theme.agentBubble,
+    alignSelf: 'flex-start',
+    maxWidth: '96%',
+    marginHorizontal: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.border,
+    borderBottomLeftRadius: 4,
+  },
+  agentText: { color: theme.text, fontSize: 15, lineHeight: 22 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   inputBar: {
     flexDirection: 'row',
@@ -219,6 +313,21 @@ const styles = StyleSheet.create({
     borderTopColor: theme.border,
     backgroundColor: theme.surface,
   },
+  micBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.surfaceAlt,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.border,
+  },
+  micActive: {
+    backgroundColor: theme.tealSoft,
+    borderColor: theme.teal,
+  },
+  micTxt: { fontSize: 16 },
   input: {
     flex: 1,
     backgroundColor: theme.surfaceAlt,
@@ -241,6 +350,12 @@ const styles = StyleSheet.create({
   sendDisabled: { opacity: 0.35 },
   stopBtn: { backgroundColor: theme.danger },
   sendTxt: { color: '#fff', fontSize: 16 },
+  voiceError: {
+    color: theme.warn,
+    fontSize: 11,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
   startCard: {
     backgroundColor: theme.surface,
     margin: 24,
@@ -260,15 +375,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   startBtnTxt: { color: theme.accent, fontWeight: '700', fontSize: 14 },
-  empty: { alignItems: 'center', paddingTop: 40, paddingHorizontal: 24, gap: 8 },
-  emptyTitle: { color: theme.text, fontSize: 20, fontWeight: '800' },
+  empty: { alignItems: 'center', paddingTop: 10, paddingHorizontal: 24, gap: 8 },
+  emptyTitle: { color: theme.text, fontSize: 18, fontWeight: '800' },
   emptyBody: { color: theme.dim, fontSize: 13, textAlign: 'center', lineHeight: 19 },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     justifyContent: 'center',
-    marginTop: 12,
+    marginTop: 10,
   },
   chip: {
     backgroundColor: theme.surface,

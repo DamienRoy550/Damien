@@ -47,6 +47,17 @@ export interface DeviceActions {
   openUrl(url: string): Promise<void>;
 }
 
+/** Snapshot for the system_status diagnostic tool. */
+export interface SystemSnapshot {
+  platform: string;
+  engine: string;
+  model?: string;
+  engineLoaded: boolean;
+  toolCount: number;
+  noteCount: number;
+  reminderCount?: number;
+}
+
 /** Everything a tool may touch, injected so tools stay testable in Node. */
 export interface ToolContext {
   now(): Date;
@@ -55,6 +66,8 @@ export interface ToolContext {
   fetchFn: typeof fetch;
   scheduler?: ReminderScheduler;
   device?: DeviceActions;
+  /** Diagnostics provider — injected by the runtime. */
+  systemInfo?: () => Promise<SystemSnapshot>;
   /** True when running in the demo/simulated engine (web preview, tests). */
   isDemo?: boolean;
 }

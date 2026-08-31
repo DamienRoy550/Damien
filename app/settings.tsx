@@ -46,6 +46,34 @@ export default function SettingsScreen() {
         />
       </Section>
 
+      <Section title="Persona">
+        <ToggleRow
+          label="JARVIS protocol"
+          hint="Courteous butler-engineer manners, dry wit, addresses you by your honorific, speaks replies aloud."
+          value={settings.persona === 'jarvis'}
+          onChange={(on) => update({ persona: on ? 'jarvis' : 'standard' })}
+        />
+        <View style={styles.row}>
+          <View style={styles.rowText}>
+            <Text style={styles.rowLabel}>Honorific</Text>
+            <Text style={styles.hint}>How Damien addresses you ("Sir", "Ma'am", "Boss"…)</Text>
+          </View>
+          <TextInput
+            style={styles.honorificInput}
+            value={settings.honorific}
+            onChangeText={(honorific) => update({ honorific: honorific.slice(0, 24) })}
+            placeholder="Sir"
+            placeholderTextColor={theme.faint}
+          />
+        </View>
+        <ToggleRow
+          label="Voice output"
+          hint="Speak final replies aloud (British accent when available)."
+          value={settings.voiceOut}
+          onChange={(voiceOut) => update({ voiceOut })}
+        />
+      </Section>
+
       <Section title="Standing instructions">
         <Text style={styles.hint}>
           Extra rules Damien follows on every task (kept in the system prompt).
@@ -192,4 +220,14 @@ const styles = StyleSheet.create({
   },
   body: { color: theme.dim, fontSize: 13, lineHeight: 19 },
   repo: { color: theme.accent, fontSize: 13, fontWeight: '600' },
+  honorificInput: {
+    backgroundColor: theme.surfaceAlt,
+    borderRadius: 10,
+    color: theme.text,
+    fontSize: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    width: 110,
+    textAlign: 'center',
+  },
 });

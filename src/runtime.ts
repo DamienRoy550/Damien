@@ -8,6 +8,7 @@ import { findModel } from './llm/models';
 import { asyncStorageKv } from './services/storage';
 import { deviceActions } from './services/device';
 import { getScheduler } from './services/scheduler';
+import { setSpeechEnabled, speak, stopSpeaking } from './services/speech';
 import { useModels } from './state/models';
 import { useSettings } from './state/settings';
 import { useRuns } from './state/runs';
@@ -20,6 +21,26 @@ import { Platform } from 'react-native';
  */
 
 let toolContextPromise: Promise<ToolContext> | null = null;
+let activeRegistry: ToolRegistry | null = null;
+
+async function buildSystemInfo() {
+  const engine = getEngine();
+  const { selectedModelId } = useModels.getState();
+  const model = findModel(selectedModelId);
+  const noteKeys = await asyncStorageKv.keysWithPrefix('note:');
+  return {
+    platform: Platform.OS === 'web' ? 'web (demo)' : `${Platform.OS} (on-device)`,
+    engine: engine.info
+      ? 'on-device LLM'
+      : Platform.OS === 'web'
+        ? 'demo brain (simulated)'
+        : 'not loaded',
+    model: engine.info?.name ?? model?.name,
+    engineLoaded: engine.info !== null,
+    toolCount: activeRegistry?.all.length ?? 0,
+    noteCount: noteKeys.length,
+  };
+}
 
 export async function getToolContext(): Promise<ToolContext> {
   if (!toolContextPromise) {
@@ -31,6 +52,7 @@ export async function getToolContext(): Promise<ToolContext> {
         fetchFn: fetch,
         scheduler,
         device: deviceActions,
+        systemInfo: buildSystemInfo,
         isDemo: false,
       };
     })();
@@ -39,7 +61,8 @@ export async function getToolContext(): Promise<ToolContext> {
 }
 
 export function getRegistry(ctx: ToolContext): ToolRegistry {
-  return createDefaultRegistry(ctx);
+  activeRegistry = createDefaultRegistry(ctx);
+  return activeRegistry;
 }
 
 const DEMO_MODEL: ModelDefinition = {
@@ -97,6 +120,10 @@ export async function startTask(task: string): Promise<void> {
   activeAbort = new AbortController();
   const signal = activeAbort.signal;
 
+  const settings = useSettings.getState();
+  setSpeechEnabled(settings.voiceOut);
+  stopSpeaking();
+
   // Conversation memory: last few completed exchanges, oldest first.
   const priorRuns = useRuns
     .getState()
@@ -118,10 +145,11 @@ export async function startTask(task: string): Promise<void> {
       }));
     });
 
-    const settings = useSettings.getState();
     const agent = new AgentEngine(engine, registry, ctx, {
       timeZone: undefined, // Intl device default
       extraInstructions: settings.extraInstructions || undefined,
+      persona: settings.persona,
+      honorific: settings.honorific,
     });
 
     const result = await agent.run(trimmed, {
@@ -133,6 +161,7 @@ export async function startTask(task: string): Promise<void> {
       onEvent: dispatch,
     });
     useRuns.getState().finishRun(runId, result);
+    if (result.answer) void speak(result.answer);
   } catch (e) {
     useRuns.getState().failRun(runId, e instanceof Error ? e.message : String(e));
   } finally {

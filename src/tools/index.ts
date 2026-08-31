@@ -10,6 +10,7 @@ import { createReminderTool } from './builtin/reminder';
 import { textStats } from './builtin/textStats';
 import { clipboardTool } from './builtin/device';
 import { openWebsite, openApp } from './builtin/apps';
+import { systemStatus } from './builtin/systemStatus';
 
 /**
  * The default Damien toolbox. Order matters — it's the order tools are
@@ -24,6 +25,7 @@ export function createDefaultRegistry(ctx: ToolContext): ToolRegistry {
   registry.register(webFetch);
   registry.register(httpRequest);
   registry.register(textStats);
+  registry.register(systemStatus);
   if (ctx.device) {
     registry.register(clipboardTool);
     registry.register(openWebsite);
