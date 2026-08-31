@@ -22,6 +22,7 @@ const SUGGESTIONS = [
   'Convert 42 km to miles',
   'Take a note: buy oat milk tomorrow',
   'Remind me to stretch in 45 minutes',
+  'Open youtube.com',
   'Fetch https://example.com and summarize it',
 ];
 

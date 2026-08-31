@@ -17,21 +17,3 @@ export const clipboardTool: Tool = {
     return ok(`Copied ${text.length} characters to the clipboard. Confirm briefly to the user.`);
   },
 };
-
-/** Open a URL / deep link in the phone browser or matching app. */
-export const openLinkTool: Tool = {
-  name: 'open_link',
-  description:
-    'Open a URL or app deep link on the phone (browser, maps, mailto:, tel:, spotify:, etc). Use when the user asks to open/show/launch something.',
-  parameters: [
-    { name: 'url', type: 'string', description: 'The URL or deep link to open', required: true },
-  ],
-  runsOffline: true,
-  async execute(args, ctx) {
-    const url = String(args.url ?? '').trim();
-    if (!url) return err('url is required');
-    if (!ctx.device) return err('open_link is not available.');
-    await ctx.device.openUrl(url);
-    return ok(`Opened ${url}. Confirm briefly to the user.`);
-  },
-};

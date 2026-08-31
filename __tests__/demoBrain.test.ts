@@ -70,6 +70,30 @@ describe('demo brain speaks the wire protocol', () => {
     expect(r.tool).toBe('web_fetch');
     expect(r.arguments.url).toBe('https://example.com');
   });
+
+  it('routes "open <app>" to open_app', () => {
+    const r = reply(demoBrain({ messages: user('open youtube') }));
+    expect(r.tool).toBe('open_app');
+    expect(r.arguments.app).toBe('youtube');
+  });
+
+  it('routes android packages to open_app', () => {
+    const r = reply(demoBrain({ messages: user('launch com.whatsapp') }));
+    expect(r.tool).toBe('open_app');
+    expect(r.arguments.app).toBe('com.whatsapp');
+  });
+
+  it('routes "open <domain>" to open_website', () => {
+    const r = reply(demoBrain({ messages: user('open youtube.com') }));
+    expect(r.tool).toBe('open_website');
+    expect(r.arguments.url).toBe('youtube.com');
+  });
+
+  it('routes "visit https://..." to open_website', () => {
+    const r = reply(demoBrain({ messages: user('visit https://example.dev/pricing') }));
+    expect(r.tool).toBe('open_website');
+    expect(r.arguments.url).toBe('example.dev/pricing');
+  });
 });
 
 describe('demo brain conversation', () => {

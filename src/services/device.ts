@@ -7,10 +7,9 @@ export const deviceActions: DeviceActions = {
     await Clipboard.setStringAsync(text);
   },
   async openUrl(url) {
-    const supported = await Linking.canOpenURL(url);
-    if (!supported && !/^https?:\/\//i.test(url)) {
-      throw new Error(`No app can open "${url}"`);
-    }
+    // No canOpenURL gate: on Android 11+ queries are needed for visibility
+    // and on iOS it false-negatives for schemes not declared — just try the
+    // launch and let failures surface as typed errors for the agent.
     await Linking.openURL(url);
   },
 };

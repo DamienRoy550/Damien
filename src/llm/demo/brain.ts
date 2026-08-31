@@ -1,4 +1,5 @@
 import type { ChatMessage } from '../../llm/types';
+import { looksLikeWebsite } from '../../tools/builtin/apps';
 
 export interface BrainRequest {
   messages: ChatMessage[];
@@ -26,6 +27,7 @@ const URL_RE = /(https?:\/\/[^\s"']+)/;
 const NOTE_RE = /\b(?:take a note|make a note|note down|write down|remember that|remember this|save (?:a )?note)\b[:\s]*(.*)/i;
 const NOTES_READ_RE = /\b(?:my notes|list notes|show notes|read (?:my )?notes|what did i (?:note|save|write)|what have i saved)\b/i;
 const TIME_RE = /\b(?:what(?:'s| is)?(?: the)? time|what(?:'s| is)?(?: the)? date|what day|current time|current date|today'?s date|what time is it)\b/i;
+const OPEN_RE = /^(?:please\s+)?(?:open|launch|start|go\s+to|visit|browse(?:\s+to)?|take\s+me\s+to)\s+(?:the\s+)?(.+?)[\s.!]*$/i;
 
 function lastMessage(messages: ChatMessage[]): ChatMessage | undefined {
   return messages[messages.length - 1];
@@ -73,7 +75,8 @@ const CAPABILITIES = `Nice to meet you! I'm Damien — an AI agent that runs ent
 • Memory — "Take a note: buy oat milk", then later "Show my notes"
 • Time — "What time is it?", "What's 3 weeks after March 1?"
 • Reminders — "Remind me to stretch in 45 minutes"
-• Web — "Fetch https://example.com"
+• Web — "Fetch https://example.com" or "open wikipedia.org"
+• Launch — "open youtube", "open com.whatsapp", "open spotify" (on a phone this launches the real app; in this browser preview a site opens in a new tab)
 On a real phone, a small language model runs 100% offline and drives this same loop — no cloud, no account.`;
 
 function answer(text: string, thought: string): string {
@@ -143,6 +146,17 @@ function routeMessage(task: string): string | null {
 
   if (TIME_RE.test(task)) {
     return toolCall('Checking the clock.', 'datetime', { operation: 'now' });
+  }
+
+  // Open apps / websites ("open youtube", "open youtube.com", "visit example.dev")
+  const open = OPEN_RE.exec(task.trim());
+  if (open) {
+    const rawTarget = (open[1] ?? '').trim();
+    if (looksLikeWebsite(rawTarget)) {
+      const url = rawTarget.replace(/^https?:\/\//i, '');
+      return toolCall(`Opening the website ${url}.`, 'open_website', { url });
+    }
+    return toolCall(`Launching the app ${rawTarget}.`, 'open_app', { app: rawTarget });
   }
 
   const url = URL_RE.exec(task);

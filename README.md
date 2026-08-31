@@ -38,7 +38,7 @@ notification reminders, a web reader, a raw HTTP client, clipboard, deep links �
 - 🔒 **Fully offline** — model weights, agent loop, notes and history never leave the device.
 - 🧠 **On-device inference** — llama.cpp via [llama.rn](https://github.com/mybigday/llama.rn),
   GPU-accelerated (Metal / OpenCL / Vulkan) where available.
-- 🛠️ **Tool runtime** — 10 built-in tools with schema validation, timeouts and argument coercion.
+- 🛠️ **Tool runtime** — 14 built-in tools with schema validation, timeouts and argument coercion.
 - 📐 **Small-model engineering** — strict JSON wire protocol, grammar-constrained generation
   (GBNF / `response_format`), context trimming tuned for 2k–8k windows, step budgets with a
   forced-final-answer escape hatch.
@@ -89,11 +89,12 @@ Small, permissive, phone-tested. Damien downloads GGUF files straight from Huggi
 | `unit_convert` | Length, mass, volume, speed, data, time, temperature | ✅ |
 | `datetime` | Now, date arithmetic, date differences | ✅ |
 | `save_note` / `list_notes` / `search_notes` / `delete_note` | Persistent memory across restarts | ✅ |
-| `schedule_reminder` | Local notifications at absolute or relative times | ✅ |
-| `web_fetch` | Download a page → readable text | 🌐 |
+| `schedule_reminder` | Local notifications at absolute or relative times | ✅ || `web_fetch` | Download a page → readable text | 🌐 |
 | `http_request` | Call any JSON API (the "everything else" escape hatch) | 🌐 |
 | `text_stats` | Word counts, reading time, keywords | ✅ |
-| `copy_to_clipboard` / `open_link` | Hand results back to the phone | ✅ |
+| `open_website` | Open any site in the browser (bare domains normalized) | ✅ |
+| `open_app` | Launch installed apps: by name (40+ app directory), Android package (`intent:` URI), or any deep link | ✅ |
+| `copy_to_clipboard` | Hand results back to the phone | ✅ |
 
 Adding your own is the main way to contribute → **[Tool authoring guide](docs/TOOL_AUTHORING.md)**.
 
