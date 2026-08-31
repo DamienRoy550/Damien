@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Damien",
+    "slug": "damien",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "damien",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "background": "#0A0C10",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.damien.agent",
+      "infoPlist": {
+        "LSMinimumSystemVersion": "13.0"
+      }
+    },
+    "android": {
+      "package": "app.damien.agent",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0C10"
+      },
+      "permissions": ["android.permission.POST_NOTIFICATIONS"]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "color": "#6C8CFF"
+        }
+      ],
+      "llama.rn/app.plugin"
+    ]
+  }
+}

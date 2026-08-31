@@ -1,0 +1,57 @@
+{
+  "name": "damien",
+  "version": "0.1.0",
+  "description": "Damien — an open-source, offline-first AI agent that lives on your phone. On-device small language model + a tool runtime that completes digital tasks for you.",
+  "license": "MIT",
+  "main": "expo-router/entry",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DamienRoy550/Damien.git"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "on-device",
+    "offline",
+    "llm",
+    "llama",
+    "react-native",
+    "expo",
+    "open-source"
+  ],
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "export:web": "expo export --platform web --output-dir webapp",
+    "serve:web": "npx serve -s webapp -l 4173"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "expo": "~57.0.18",
+    "expo-clipboard": "~57.0.1",
+    "expo-constants": "~57.0.16",
+    "expo-file-system": "~57.0.6",
+    "expo-linking": "~57.0.8",
+    "expo-notifications": "~57.0.15",
+    "expo-router": "~57.0.17",
+    "expo-status-bar": "~57.0.1",
+    "llama.rn": "^0.12.9",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-native": "^0.86.3",
+    "react-native-web": "^0.21.2",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.2.18",
+    "jest": "^30.5.0",
+    "ts-jest": "^29.4.12",
+    "typescript": "~5.9.2"
+  }
+}
