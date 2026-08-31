@@ -43,29 +43,42 @@ const server = http.createServer((req, res) => {
       return;
     }
 
-    if (urlPath === '/' || !path.extname(filePath)) {
+    const hasExtension = Boolean(path.extname(filePath));
+    if (urlPath === '/' || !hasExtension) {
       filePath = path.join(ROOT, 'index.html'); // SPA fallback
     }
 
     fs.readFile(filePath, (err, data) => {
       if (err) {
-        // final fallback: serve index.html for unknown routes
+        // Missing ASSET (has extension) must 404 loudly — serving HTML here
+        // makes the browser abort with a MIME error (blank white page).
+        if (hasExtension) {
+          res.writeHead(404, { 'Content-Type': 'text/plain' });
+          res.end(`404: ${urlPath} not found — rebuild with \`npm run export:web\``);
+          return;
+        }
+        // Unknown route → SPA
         fs.readFile(path.join(ROOT, 'index.html'), (err2, index) => {
           if (err2) {
             res.writeHead(404);
             res.end('Not found (did you build the demo? `npm run export:web`)');
             return;
           }
-          res.writeHead(200, { 'Content-Type': MIME['.html'] });
-          res.end(index);
+          res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store' });
+          res.end(injectErrorTrap(index));
         });
         return;
       }
       const ext = path.extname(filePath).toLowerCase();
-      res.writeHead(200, {
+      const headers = {
         'Content-Type': MIME[ext] || 'application/octet-stream',
         'Cache-Control': 'no-cache',
-      });
+      };
+      if (ext === '.html') {
+        headers['Cache-Control'] = 'no-store';
+        data = injectErrorTrap(data);
+      }
+      res.writeHead(200, headers);
       res.end(data);
     });
   } catch {
@@ -73,6 +86,31 @@ const server = http.createServer((req, res) => {
     res.end('Server error');
   }
 });
+
+const TRAP = `<script>
+(function(){
+  function show(kind,msg){
+    try{
+      var el=document.createElement('pre');
+      el.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;margin:0;background:#7f1d1d;color:#fff;font:12px/1.5 Menlo,monospace;padding:10px;white-space:pre-wrap;max-height:45vh;overflow:auto';
+      el.textContent=kind+': '+msg;
+      (document.body||document.documentElement).appendChild(el);
+    }catch(e){}
+  }
+  window.addEventListener('error',function(e){
+    show('JS ERROR',(e.message||'unknown')+'  ['+String(e.filename||'').split('/').pop()+':'+e.lineno+':'+e.colno+']');
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    show('PROMISE REJECTION', String(e.reason && (e.reason.stack||e.reason.message) || e.reason));
+  });
+})();
+</script>`;
+
+function injectErrorTrap(html) {
+  const s = html.toString('utf8');
+  if (s.includes('JS ERROR')) return Buffer.from(s); // already injected
+  return Buffer.from(s.replace('</head>', `${TRAP}\n</head>`));
+}
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Damien web demo: http://localhost:${PORT} (serving ${ROOT})`);
