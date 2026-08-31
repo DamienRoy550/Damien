@@ -41,8 +41,8 @@
     "expo-router": "~57.0.17",
     "expo-status-bar": "~57.0.1",
     "llama.rn": "^0.12.9",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-native": "^0.86.3",
     "react-native-web": "^0.21.2",
     "zustand": "^5.0.15"
@@ -51,6 +51,7 @@
     "@types/jest": "^30.0.0",
     "@types/react": "^19.2.18",
     "jest": "^30.5.0",
+    "jsdom": "^30.0.1",
     "ts-jest": "^29.4.12",
     "typescript": "~5.9.2"
   }
