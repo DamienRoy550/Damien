@@ -30,6 +30,26 @@ describe('context builder', () => {
       arguments: { expression: '1+1' },
     });
   });
+
+  it('inserts conversation history between the task and the steps', () => {
+    const history = [
+      { role: 'user' as const, content: 'hello' },
+      { role: 'assistant' as const, content: 'Hi!' },
+    ];
+    const msgs = buildMessages(
+      { systemPrompt: 'SYS', task: 'TASK', steps: makeSteps(1), history },
+      10_000,
+    );
+    expect(msgs.map((m) => m.role)).toEqual([
+      'system',
+      'user',
+      'user',
+      'assistant',
+      'assistant',
+      'user',
+    ]);
+    expect(msgs[2]).toEqual({ role: 'user', content: 'hello' });
+  });
 });
 
 describe('context trimming', () => {

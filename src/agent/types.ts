@@ -58,6 +58,11 @@ export interface AgentRunOptions {
   maxToolTokens?: number;
   /** Hard cap on characters kept from any single tool observation. */
   observationCharLimit?: number;
+  /**
+   * Prior conversation turns (user/assistant), oldest first. Given to the
+   * model verbatim and dropped first when the context budget tightens.
+   */
+  history?: import('../llm/types').ChatMessage[];
   signal?: AbortSignal;
   onEvent?: AgentEventHandler;
 }

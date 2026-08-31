@@ -97,6 +97,16 @@ export async function startTask(task: string): Promise<void> {
   activeAbort = new AbortController();
   const signal = activeAbort.signal;
 
+  // Conversation memory: last few completed exchanges, oldest first.
+  const priorRuns = useRuns
+    .getState()
+    .runs.filter((r) => (r.status === 'ok' || r.status === 'max_steps') && r.answer)
+    .slice(-3);
+  const history = priorRuns.flatMap((r) => [
+    { role: 'user' as const, content: r.task },
+    { role: 'assistant' as const, content: r.answer as string },
+  ]);
+
   try {
     const ctx = await getToolContext();
     const registry = getRegistry(ctx);
@@ -118,6 +128,7 @@ export async function startTask(task: string): Promise<void> {
       maxSteps: settings.maxSteps,
       temperature: settings.temperature,
       observationCharLimit: settings.observationCharLimit,
+      history,
       signal,
       onEvent: dispatch,
     });

@@ -6,6 +6,8 @@ export interface AgentTaskContextInput {
   systemPrompt: string;
   task: string;
   steps: StepRecord[];
+  /** Prior conversation turns (user/assistant), oldest first. */
+  history?: ChatMessage[];
 }
 
 /**
@@ -16,7 +18,8 @@ export interface AgentTaskContextInput {
  *  1. System prompt and the user's task are NEVER trimmed.
  *  2. Oldest tool observations are replaced with "[omitted]" first —
  *     the model needs the latest observation most.
- *  3. Whole oldest steps are dropped next.
+ *  3. Whole oldest steps are dropped next — which also eats conversation
+ *     history first, since it sits directly after the task.
  *  4. The newest step is always kept verbatim (the model is mid-thought).
  */
 export function buildMessages(
@@ -27,6 +30,10 @@ export function buildMessages(
     { role: 'system', content: input.systemPrompt },
     { role: 'user', content: input.task },
   ];
+
+  if (input.history && input.history.length > 0) {
+    messages.push(...input.history);
+  }
 
   for (const step of input.steps) {
     messages.push({ role: 'assistant', content: serializeStepForModel(step) });

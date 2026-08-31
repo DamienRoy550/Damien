@@ -61,7 +61,10 @@ export class AgentEngine {
         break;
       }
 
-      const messages = buildMessages({ systemPrompt, task, steps }, budget);
+      const messages = buildMessages(
+        { systemPrompt, task, steps, history: options.history },
+        budget,
+      );
       emit({ type: 'reply_started', step: stepIndex });
 
       let replyText = '';
@@ -207,6 +210,7 @@ export class AgentEngine {
         {
           systemPrompt,
           task,
+          history: options.history,
           steps: [
             ...steps,
             {
