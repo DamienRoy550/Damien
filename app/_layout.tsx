@@ -32,6 +32,7 @@ export default function RootLayout() {
         <Stack.Screen name="setup" options={{ title: 'Model Setup' }} />
         <Stack.Screen name="history" options={{ title: 'Task History' }} />
         <Stack.Screen name="settings" options={{ title: 'Settings' }} />
+        <Stack.Screen name="browse" options={{ title: 'Browser' }} />
       </Stack>
     </View>
   );

@@ -9,10 +9,12 @@ class FakeStore implements KeyValueStore {
   async keysWithPrefix(p: string) { return [...this.map.keys()].filter((k) => k.startsWith(p)); }
 }
 
-function makeCtx(device?: Partial<DeviceActions>): ToolContext & { opened: string[] } {
+function makeCtx(device?: Partial<DeviceActions>): ToolContext & { opened: string[]; openedInApp: string[] } {
   const opened: string[] = [];
+  const openedInApp: string[] = [];
   return {
     opened,
+    openedInApp,
     now: () => new Date('2026-03-01T12:00:00Z'),
     storage: new FakeStore(),
     fetchFn: (async () => { throw new Error('offline'); }) as unknown as typeof fetch,
@@ -22,14 +24,18 @@ function makeCtx(device?: Partial<DeviceActions>): ToolContext & { opened: strin
         opened.push(url);
         if (device?.openUrl) await device.openUrl(url);
       },
+      async openInAppBrowser(url: string) {
+        openedInApp.push(url);
+      },
     },
   };
 }
 
 describe('resolveAppTarget', () => {
   it('maps well-known app names to schemes', () => {
-    expect(resolveAppTarget('youtube')).toEqual({ url: 'youtube://', strategy: 'app shortcut "youtube"' });
-    expect(resolveAppTarget('WhatsApp')).toEqual({ url: 'whatsapp://', strategy: 'app shortcut "WhatsApp"' });
+    expect(resolveAppTarget('youtube')!.url).toBe('youtube://');
+    expect(resolveAppTarget('youtube')!.strategy).toBe('app shortcut "youtube"');
+    expect(resolveAppTarget('WhatsApp')!.url).toBe('whatsapp://');
     expect(resolveAppTarget('google maps').url).toBe('comgooglemaps://');
   });
 
@@ -63,17 +69,17 @@ describe('resolveAppTarget', () => {
 });
 
 describe('open_website tool', () => {
-  it('normalizes bare domains and opens', async () => {
+  it('normalizes bare domains and opens in the in-app browser', async () => {
     const ctx = makeCtx();
     const res = await openWebsite.execute({ url: 'en.wikipedia.org/wiki/Cat' }, ctx);
     expect(res.ok).toBe(true);
-    expect(ctx.opened).toEqual(['https://en.wikipedia.org/wiki/Cat']);
+    expect(ctx.openedInApp).toEqual(['https://en.wikipedia.org/wiki/Cat']);
   });
 
   it('passes full URLs through', async () => {
     const ctx = makeCtx();
     await openWebsite.execute({ url: 'https://example.com/x?q=1' }, ctx);
-    expect(ctx.opened).toEqual(['https://example.com/x?q=1']);
+    expect(ctx.openedInApp).toEqual(['https://example.com/x?q=1']);
   });
 
   it('rejects non-websites', async () => {
@@ -111,6 +117,17 @@ describe('open_app tool', () => {
     expect(ctx.opened).toEqual(['spotify://track/xyz']);
   });
 
+  it('falls back to the web version of an app in the demo', async () => {
+    const ctx = makeCtx({
+      openUrl: async () => {
+        throw new Error('no scheme handler on web');
+      },
+    });
+    const res = await openApp.execute({ app: 'youtube' }, ctx);
+    expect(res.ok).toBe(true);
+    expect(ctx.openedInApp).toEqual(['https://www.youtube.com']);
+  });
+
   it('suggests the store page when the package is not installed', async () => {
     const ctx = makeCtx({
       openUrl: async () => {
@@ -131,5 +148,21 @@ describe('open_app tool', () => {
     const res = await openApp.execute({ app: 'zombo' }, ctx);
     expect(res.ok).toBe(false);
     expect(res.output).toContain('URL scheme');
+  });
+
+  it('falls back to the web version of an app in the demo', async () => {
+    const ctx = makeCtx({
+      openUrl: async () => {
+        throw new Error('no scheme handler on web');
+      },
+    });
+    const res = await openApp.execute({ app: 'youtube' }, ctx);
+    expect(res.ok).toBe(true);
+    expect(ctx.openedInApp).toEqual(['https://www.youtube.com']);
+  });
+
+  it('exposes web fallbacks in resolveAppTarget', () => {
+    expect(resolveAppTarget('spotify').webFallback).toBe('https://open.spotify.com');
+    expect(resolveAppTarget('zombo').webFallback).toBeUndefined();
   });
 });

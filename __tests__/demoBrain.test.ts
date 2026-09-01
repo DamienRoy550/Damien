@@ -71,6 +71,30 @@ describe('demo brain speaks the wire protocol', () => {
     expect(r.arguments.url).toBe('https://example.com');
   });
 
+  it('proactively searches YouTube', () => {
+    const r = reply(demoBrain({ messages: user('search youtube for lofi beats') }));
+    expect(r.tool).toBe('open_website');
+    expect(r.arguments.url).toBe('https://www.youtube.com/results?search_query=lofi%20beats');
+  });
+
+  it('proactively googles on request', () => {
+    const r = reply(demoBrain({ messages: user('google cat facts') }));
+    expect(r.tool).toBe('open_website');
+    expect(r.arguments.url).toBe('https://www.google.com/search?q=cat%20facts');
+  });
+
+  it('looks things up on wikipedia', () => {
+    const r = reply(demoBrain({ messages: user('wikipedia quantum computing') }));
+    expect(r.tool).toBe('open_website');
+    expect(String(r.arguments.url)).toContain('en.wikipedia.org');
+  });
+
+  it('treats "look up X" as a web search', () => {
+    const r = reply(demoBrain({ messages: user('look up quantum computing') }));
+    expect(r.tool).toBe('open_website');
+    expect(String(r.arguments.url)).toContain('google.com/search');
+  });
+
   it('routes "open <app>" to open_app', () => {
     const r = reply(demoBrain({ messages: user('open youtube') }));
     expect(r.tool).toBe('open_app');

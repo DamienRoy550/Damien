@@ -67,6 +67,47 @@ export const APP_SCHEMES: Record<string, string> = {
   settings: 'app-settings',
 };
 
+/**
+ * Web equivalents so the browser demo can "open" popular apps even though
+ * schemes cannot launch inside a web page. Native devices use the schemes
+ * above; the demo falls back to these.
+ */
+export const APP_WEB_FALLBACKS: Record<string, string> = {
+  youtube: 'https://www.youtube.com',
+  ytmusic: 'https://music.youtube.com',
+  'youtube music': 'https://music.youtube.com',
+  whatsapp: 'https://web.whatsapp.com',
+  spotify: 'https://open.spotify.com',
+  facebook: 'https://www.facebook.com',
+  fb: 'https://www.facebook.com',
+  messenger: 'https://www.messenger.com',
+  instagram: 'https://www.instagram.com',
+  twitter: 'https://x.com',
+  x: 'https://x.com',
+  telegram: 'https://web.telegram.org',
+  tiktok: 'https://www.tiktok.com',
+  reddit: 'https://www.reddit.com',
+  discord: 'https://discord.com/app',
+  slack: 'https://app.slack.com',
+  gmail: 'https://mail.google.com',
+  outlook: 'https://outlook.live.com',
+  googlemaps: 'https://www.google.com/maps',
+  'google maps': 'https://www.google.com/maps',
+  maps: 'https://www.google.com/maps',
+  waze: 'https://www.waze.com/live-map',
+  uber: 'https://m.uber.com',
+  netflix: 'https://www.netflix.com',
+  amazon: 'https://www.amazon.com',
+  paypal: 'https://www.paypal.com',
+  linkedin: 'https://www.linkedin.com',
+  pinterest: 'https://www.pinterest.com',
+  twitch: 'https://www.twitch.tv',
+  github: 'https://github.com',
+  chrome: 'https://www.google.com/chrome',
+  shazam: 'https://www.shazam.com',
+  duolingo: 'https://www.duolingo.com',
+};
+
 const ANDROID_PACKAGE_RE = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,}$/i;
 const KNOWN_TLD_RE =
   /\.(com|net|org|io|co|dev|app|ai|edu|gov|info|me|tv|xyz|uk|us|ca|de|fr|es|it|nl|se|no|fi|jp|kr|in|au|br|mx|ru|ch|fm|gg|so|to|sh|is|be|at|pt|pl|cz|ie|nz|za|ng|ke|fj)$/i;
@@ -87,18 +128,27 @@ function slug(text: string): string {
 }
 
 /** Build the URL open_app will try for a given input. Exported for tests. */
-export function resolveAppTarget(input: string): { url: string; strategy: string } {
+export function resolveAppTarget(input: string): {
+  url: string;
+  strategy: string;
+  webFallback?: string;
+} {
   const t = input.trim();
+  const key = APP_SCHEMES[t.toLowerCase()] !== undefined ? t.toLowerCase() : slug(t);
 
   // 1. Explicit scheme / deep link ("whatsapp://send?text=hi")
   if (EXPLICIT_SCHEME_RE.test(t) && /:\/\//.test(t)) {
     return { url: t, strategy: 'deep link' };
   }
 
-  // 2. Curated alias ("youtube" → "youtube://")
-  const alias = APP_SCHEMES[t.toLowerCase()] ?? APP_SCHEMES[slug(t)];
+  // 2. Curated alias ("youtube" → "youtube://"), with a web fallback for demos
+  const alias = APP_SCHEMES[key];
   if (alias) {
-    return { url: `${alias}://`, strategy: `app shortcut "${t}"` };
+    return {
+      url: `${alias}://`,
+      strategy: `app shortcut "${t}"`,
+      webFallback: APP_WEB_FALLBACKS[key],
+    };
   }
 
   // 3. Android package ("com.spotify.music" → intent URI)
@@ -133,6 +183,10 @@ export const openWebsite: Tool = {
       url = `https://${url}`;
     }
     try {
+      if (ctx.device.openInAppBrowser) {
+        await ctx.device.openInAppBrowser(url);
+        return ok(`Opened ${url} in the in-app browser. Confirm briefly to the user.`);
+      }
       await ctx.device.openUrl(url);
       return ok(`Opened ${url} in the browser. Confirm briefly to the user.`);
     } catch (e) {
@@ -161,11 +215,22 @@ export const openApp: Tool = {
     const input = String(args.app ?? args.name ?? args.package ?? args.scheme ?? '').trim();
     if (!input) return err('app is required');
 
-    const { url, strategy } = resolveAppTarget(input);
+    const { url, strategy, webFallback } = resolveAppTarget(input);
     try {
       await ctx.device.openUrl(url);
       return ok(`Opened ${input} (${strategy}). Confirm briefly to the user.`);
     } catch {
+      // Web demo (or scheme-less platform): open the app's web version instead.
+      if (webFallback && ctx.device.openInAppBrowser) {
+        try {
+          await ctx.device.openInAppBrowser(webFallback);
+          return ok(
+            `Opened the web version of ${input} at ${webFallback} (app launching needs the phone app). Tell the user this.`,
+          );
+        } catch {
+          // fall through to the error below
+        }
+      }
       if (strategy === 'Android package') {
         return err(
           `No app responded for package "${input}". It may not be installed. You can offer to open its store page with open_website url "play.google.com/store/apps/details?id=${input}".`,

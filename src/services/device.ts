@@ -1,17 +1,30 @@
-import * as Clipboard from 'expo-clipboard';
-import { Linking, Platform } from 'react-native';
+import { router } from 'expo-router';
 import type { DeviceActions } from '../tools/types';
 
+/**
+ * Web implementation: "actually open it" means navigating INSIDE Damien —
+ * our own browser panel (app/browse). No popup blockers, works in embedded
+ * previews. The ↗ button in the panel opens a real tab from a user gesture.
+ */
 export const deviceActions: DeviceActions = {
   async copyToClipboard(text) {
-    await Clipboard.setStringAsync(text);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // clipboard permission denied — non-fatal
+    }
   },
   async openUrl(url) {
-    // No canOpenURL gate: on Android 11+ queries are needed for visibility
-    // and on iOS it false-negatives for schemes not declared — just try the
-    // launch and let failures surface as typed errors for the agent.
-    await Linking.openURL(url);
+    if (/^https?:\/\//i.test(url)) {
+      router.push(`/browse?url=${encodeURIComponent(url)}`);
+      return;
+    }
+    // Non-http schemes have no meaning in the browser demo.
+    throw new Error(`"${url}" cannot be launched inside the web demo — try it on your phone.`);
+  },
+  async openInAppBrowser(url) {
+    router.push(`/browse?url=${encodeURIComponent(url)}`);
   },
 };
 
-export const isNativeApp = Platform.OS === 'ios' || Platform.OS === 'android';
+export const isNativeApp = false;

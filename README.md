@@ -42,6 +42,7 @@ notification reminders, a web reader, a raw HTTP client, clipboard, deep links �
 - 📐 **Small-model engineering** — strict JSON wire protocol, grammar-constrained generation
   (GBNF / `response_format`), context trimming tuned for 2k–8k windows, step budgets with a
   forced-final-answer escape hatch.
+- 🌐 **Opens things for real** — an embedded browser panel (native: system browser tab) means "open youtube.com", "search youtube for lofi", or "google cat facts" actually open, proactively, no URLs required.
 - 🎩 **JARVIS protocol** — courteous butler-engineer persona with dry wit, a configurable honorific ("Sir" by default), time-aware greetings, spoken replies (British voice when available) and a full self-diagnostic: just ask "run diagnostics".
 - 🎙️ **Voice I/O (web)** — tap the mic, speak your task; Damien talks back. (On-device voice comes with the native speech module on the roadmap.)
 - 📱 **One codebase, both platforms** — Expo + React Native + TypeScript (87%+ of the code is
@@ -94,8 +95,8 @@ Small, permissive, phone-tested. Damien downloads GGUF files straight from Huggi
 | `schedule_reminder` | Local notifications at absolute or relative times | ✅ || `web_fetch` | Download a page → readable text | 🌐 |
 | `http_request` | Call any JSON API (the "everything else" escape hatch) | 🌐 |
 | `text_stats` | Word counts, reading time, keywords | ✅ |
-| `open_website` | Open any site in the browser (bare domains normalized) | ✅ |
-| `open_app` | Launch installed apps: by name (40+ app directory), Android package (`intent:` URI), or any deep link | ✅ |
+| `open_website` | Open any site in the in-app browser panel (native: OS browser tab) | ✅ |
+| `open_app` | Launch installed apps: by name (40+ app directory + web fallbacks), Android package (`intent:` URI), or any deep link | ✅ |
 | `system_status` | JARVIS-style self-diagnostic (engine, tools, memories, uptime) | ✅ |
 | `copy_to_clipboard` | Hand results back to the phone | ✅ |
 

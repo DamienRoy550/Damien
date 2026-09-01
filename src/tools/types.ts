@@ -45,6 +45,8 @@ export interface ReminderScheduler {
 export interface DeviceActions {
   copyToClipboard(text: string): Promise<void>;
   openUrl(url: string): Promise<void>;
+  /** Open a website in the platform's in-app browser (panel on web, tab on native). */
+  openInAppBrowser(url: string): Promise<void>;
 }
 
 /** Snapshot for the system_status diagnostic tool. */
