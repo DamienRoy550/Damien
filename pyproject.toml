@@ -1,0 +1,67 @@
+[project]
+name = "jarvis-core"
+version = "0.1.0"
+description = "Jarvis: an offline-first, adaptive, cross-device personal assistant (core engine + local server)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "numpy>=1.26",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+    "PyJWT>=2.8",
+    "cryptography>=42.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+# Everything below is optional: the core degrades to local behaviour without it.
+# `pip install jarvis-core[local-asr]` gives real dictation, `[voice-model]` a pretrained
+# speaker encoder, `[providers]` cloud image/video/LLM calls.
+local-asr = ["faster-whisper>=1.0"]
+voice-model = ["speechbrain>=1.0", "torch>=2.2"]
+providers = ["openai>=1.30"]
+
+[project.scripts]
+jarvis = "jarvis.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["jarvis*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# The suite is order-independent by design (each test gets its own data dir), so a
+# random order is a feature, not a flake source.
+random_order = false
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+src = ["jarvis", "tests"]
+
+[tool.ruff.lint]
+# E/F/W/I only: the engine is dense with deliberate, commented exceptions, and a linter
+# that nags about naming or docstring style in this file would be tuned out in a week.
+select = ["E", "F", "W", "I", "B", "UP", "S", "RUF"]
+ignore = [
+    "B008",    # FastAPI dependency defaults (Depends(...)/Body(...)) are the framework idiom
+    "S110",    # optional-provider probing: "not installed" is the expected outcome, not an error
+    "RUF005",  # list concatenation reads better than unpacking in the voice batteries
+    "S101",    # assert is the test language
+    "S105",    # "password-like" string literals in tests are fixtures
+    "E501",    # handled by line-length; long comments are intentional here
+    "RUF001",  # the docs use typographic punctuation (—, ‘’) on purpose
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106", "S608", "B011", "B017"]
+"jarvis/cli.py" = ["S104", "S108"]  # serve on 0.0.0.0 for container use; demo data in a temp dir

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1017">
+<title>Jarvis</title>
+<meta name="description" content="Offline-first, adaptive personal assistant core">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/web/styles.css">
+<link rel="icon" href="/web/icon.svg" type="image/svg+xml">
+</head>
+<body>
+<div id="offline-banner" class="banner" hidden></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="dot" aria-hidden="true"></span>
+    <strong>Jarvis</strong>
+    <span id="conn" class="pill">checking…</span>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab is-active" data-view="chat" role="tab">Assistant</button>
+    <button class="tab" data-view="profile" role="tab">Learns</button>
+    <button class="tab" data-view="voice" role="tab">Voice</button>
+    <button class="tab" data-view="control" role="tab">Devices</button>
+    <button class="tab" data-view="media" role="tab">Create</button>
+    <button class="tab" data-view="memory" role="tab">Memory</button>
+    <button class="tab" data-view="sync" role="tab">Sync</button>
+  </nav>
+  <div class="account">
+    <span id="who" class="muted"></span>
+    <button id="signout" class="ghost" hidden>Sign out</button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-signin" class="view">
+    <div class="signin-wrap">
+      <div class="hero">
+        <h1>Your assistant, on your terms.</h1>
+        <p class="lede">Adaptive, offline-first, and the same on every device you sign in to.
+        No account is created on a server — this instance stores everything in a local database.</p>
+        <ul class="hero-points">
+          <li>Learns how you like to be answered, and keeps learning</li>
+          <li>Works with no network: memory, voiceprint, device control, generation</li>
+          <li>Sign in with Google, Apple or Microsoft on any device</li>
+          <li>Only your voice unlocks the risky parts</li>
+        </ul>
+      </div>
+      <form id="signin-form" class="card form">
+        <h2>Sign in</h2>
+        <p id="idp-mode" class="muted small"></p>
+        <label>Email
+          <input name="email" type="email" value="you@example.com" autocomplete="username" required>
+        </label>
+        <label>Name
+          <input name="display_name" type="text" placeholder="Your name" autocomplete="name">
+        </label>
+        <label>Provider
+          <select name="provider">
+            <option value="google">Gmail / Google</option>
+            <option value="apple">Apple ID</option>
+            <option value="microsoft">Microsoft account</option>
+          </select>
+        </label>
+        <div class="provider-buttons">
+          <button type="submit" class="primary">Continue</button>
+          <button type="button" class="ghost" data-oidc="google">Google OIDC</button>
+          <button type="button" class="ghost" data-oidc="apple">Apple OIDC</button>
+          <button type="button" class="ghost" data-oidc="microsoft">Microsoft OIDC</button>
+        </div>
+        <p class="note" id="dev-note"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-chat" class="view" hidden>
+    <div class="chat-layout">
+      <div class="card thread-card">
+        <div class="thread-head">
+          <h2>Assistant</h2>
+          <span id="engine-badge" class="pill">local engine</span>
+        </div>
+        <div id="thread" class="thread" aria-live="polite"></div>
+        <form id="composer" class="composer">
+          <textarea id="input" rows="1" placeholder="Ask me to brainstorm, draft, plan, remember, control a device, or generate an image…" required></textarea>
+          <button id="mic-btn" class="icon" type="button" title="Hold to talk (dictation)" aria-label="Dictate">🎙</button>
+          <button class="primary" type="submit" id="send">Send</button>
+        </form>
+        <div id="dictation" class="dictation" hidden></div>
+      </div>
+      <aside class="card side-card">
+        <h3>Right now</h3>
+        <div id="side-status" class="side-status"></div>
+        <h3>Suggested</h3>
+        <div id="quick-actions" class="chips"></div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-profile" class="view" hidden>
+    <div class="grid-2">
+      <div class="card">
+        <h2>How I have learned to answer you</h2>
+        <p class="muted small">Every slider is a learned trait, not a setting. Say “be more concise”
+        anywhere in chat and the matching slider moves by itself.</p>
+        <div id="traits" class="traits"></div>
+        <div class="row">
+          <button id="reset-traits" class="ghost">Reset what I learned</button>
+          <span id="obs-count" class="muted small"></span>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Active directives</h2>
+        <p class="muted small">This is injected into every answer I produce, local or model-backed.</p>
+        <pre id="directive" class="code"></pre>
+        <h3>Interests</h3>
+        <div id="interests" class="chips"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-voice" class="view" hidden>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Voiceprint</h2>
+        <p class="muted small">Recognises <em>you</em>, locally. It is a step-up factor in front of risky
+        actions — never a replacement for your password.</p>
+        <div id="voice-status" class="status-block"></div>
+        <div class="row">
+          <button id="enroll-btn" class="primary">Record enrolment sample</button>
+          <button id="verify-btn" class="ghost">Verify &amp; unlock</button>
+          <button id="reset-voice" class="ghost danger">Delete voiceprint</button>
+        </div>
+        <div class="demo-box">
+          <p class="muted small">No microphone handy? Exercise the same code path with synthesised speech.</p>
+          <div class="row">
+            <button id="demo-enroll" class="ghost" type="button">Synthesise 3 samples</button>
+            <input id="demo-f0" type="number" value="118" step="1" min="70" max="300" aria-label="Pitch of synthesised voice">
+            <button id="demo-verify" class="ghost" type="button">Verify with my voice</button>
+            <button id="demo-impostor" class="ghost danger" type="button">Try another voice</button>
+          </div>
+        </div>
+        <div id="voice-log" class="log"></div>
+      </div>
+      <div class="card">
+        <h2>Offline voice commands</h2>
+        <p class="muted small">Closed-vocabulary recognition with no model and no network. Enrol a phrase,
+        then say it with the internet off.</p>
+        <form id="cmd-form" class="row">
+          <input id="cmd-phrase" type="text" placeholder="e.g. start sync" required maxlength="80">
+          <button id="cmd-record" class="primary" type="button">Record phrase</button>
+        </form>
+        <div id="cmd-list" class="chips"></div>
+        <div class="row">
+          <button id="cmd-test" class="ghost" type="button">Record a test phrase</button>
+          <button id="cmd-calibrate" class="ghost" type="button">Calibrate threshold</button>
+        </div>
+        <div id="cmd-log" class="log"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-control" class="view" hidden>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Devices I may touch</h2>
+        <p class="muted small">Nothing here is discovered automatically. You add a target, and it stays
+        refused until it is pairing-verified and you have allowed the capability.</p>
+        <div id="targets" class="list"></div>
+        <form id="target-form" class="form">
+          <div class="row">
+            <input id="target-name" type="text" placeholder="Living room TV" required maxlength="80">
+            <select id="target-kind">
+              <option>laptop</option><option>phone</option><option>tv</option>
+              <option>speaker</option><option>server</option><option>light</option>
+            </select>
+            <label class="check"><input id="target-paired" type="checkbox" checked> pairing verified</label>
+          </div>
+          <button class="primary" type="submit">Add device</button>
+        </form>
+        <div class="row">
+          <button id="pause-control" class="ghost danger">Pause all device control</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Capabilities &amp; rules</h2>
+        <div id="catalog" class="list compact"></div>
+        <h3>Test an action</h3>
+        <form id="exec-form" class="form">
+          <div class="row">
+            <select id="exec-capability"></select>
+            <select id="exec-target"></select>
+          </div>
+          <div class="row">
+            <input id="exec-args" type="text" placeholder='{"app":"nano"}' class="mono">
+            <label class="check"><input id="exec-dry" type="checkbox" checked> dry run</label>
+            <button class="primary" type="submit">Run</button>
+          </div>
+          <input id="exec-confirm" type="hidden">
+        </form>
+        <div id="exec-result" class="log"></div>
+      </div>
+      <div class="card span-2">
+        <h2>Audit log <span class="muted small">every decision, including denials</span></h2>
+        <div id="audit" class="list compact"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-media" class="view" hidden>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Generate</h2>
+        <form id="gen-form" class="form">
+          <label>Prompt
+            <textarea id="gen-prompt" rows="2" placeholder="calm ocean waves at dusk" required></textarea>
+          </label>
+          <div class="row">
+            <select id="gen-kind"><option value="image">Image (PNG)</option><option value="video">Clip (animated GIF)</option></select>
+            <select id="gen-style">
+              <option>poster</option><option>card</option><option>blueprint</option><option>banner</option>
+            </select>
+            <input id="gen-width" type="number" value="800" min="64" max="1600" step="16" aria-label="Width">
+            <input id="gen-height" type="number" value="500" min="64" max="1200" step="16" aria-label="Height">
+            <button class="primary" type="submit">Make it</button>
+          </div>
+          <p class="muted small" id="gen-note"></p>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Gallery</h2>
+        <div id="gallery" class="gallery"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-memory" class="view" hidden>
+    <div class="grid-2">
+      <div class="card">
+        <h2>What I remember</h2>
+        <form id="mem-form" class="row">
+          <input id="mem-body" type="text" placeholder="remember that I prefer aisle seats" required maxlength="1200">
+          <button class="primary" type="submit">Save</button>
+        </form>
+        <div class="row">
+          <input id="mem-query" type="search" placeholder="search memory…">
+          <button id="mem-search" class="ghost">Search</button>
+        </div>
+        <div id="mem-list" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>Tasks</h2>
+        <form id="task-form" class="row">
+          <input id="task-body" type="text" placeholder="email the landlord" required maxlength="400">
+          <button class="primary" type="submit">Add</button>
+        </form>
+        <div id="tasks" class="list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------------ -->
+  <section id="view-sync" class="view" hidden>
+    <div class="grid-2">
+      <div class="card">
+        <h2>Sync &amp; devices</h2>
+        <div id="sync-status" class="status-block"></div>
+        <div class="row">
+          <button id="sync-now" class="primary">Sync now</button>
+          <button id="add-device" class="ghost">Pair a new device</button>
+        </div>
+        <div id="device-list" class="list"></div>
+        <p class="note">Writes are applied locally first and journalled, then pushed. Two devices that edit
+        the same setting while both offline converge to the same answer whichever syncs first.</p>
+      </div>
+      <div class="card">
+        <h2>Capability status</h2>
+        <div id="capability-table" class="list compact"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="modal" class="modal" hidden>
+  <div class="modal-body card">
+    <h3 id="modal-title"></h3>
+    <div id="modal-content"></div>
+    <div class="row end"><button id="modal-close" class="ghost">Close</button></div>
+  </div>
+</div>
+
+<script src="/web/app.js" type="module"></script>
+</body>
+</html>
