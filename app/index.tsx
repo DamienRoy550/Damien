@@ -69,6 +69,13 @@ export default function ChatScreen() {
     send(finalText);
   });
 
+  // Show live speech transcript in the input field while listening.
+  useEffect(() => {
+    if (voice.listening && voice.transcript) {
+      setInput(voice.transcript);
+    }
+  }, [voice.listening, voice.transcript]);
+
   const data = useMemo(() => runs.slice().reverse(), [runs]);
 
   useEffect(() => {
@@ -120,6 +127,17 @@ export default function ChatScreen() {
           <HeaderButton label="Setup" onPress={() => router.push('/setup')} />
           <HeaderButton label="☰" onPress={() => router.push('/history')} accessibilityLabel="History" />
           <HeaderButton label="⚙" onPress={() => router.push('/settings')} accessibilityLabel="Settings" />
+          {isWeb ? (
+            <HeaderButton
+              label="↗"
+              accessibilityLabel="Open in a standalone tab (best for voice)"
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  window.open(window.location.href, '_blank', 'noopener');
+                }
+              }}
+            />
+          ) : null}
         </View>
       </View>
 
@@ -151,10 +169,12 @@ export default function ChatScreen() {
 
       {voice.error ? (
         <Text style={styles.voiceError}>{voice.error}</Text>
+      ) : voice.status ? (
+        <Text style={styles.voiceStatus}>{voice.status}</Text>
       ) : null}
 
       <View style={styles.inputBar}>
-        {voice.supported ? (
+        {isWeb ? (
           <Pressable
             onPress={voice.listening ? voice.stop : voice.start}
             style={[styles.micBtn, voice.listening && styles.micActive]}
@@ -167,7 +187,7 @@ export default function ChatScreen() {
           style={styles.input}
           placeholder={
             voice.listening
-              ? 'Listening…'
+              ? 'Listening… speak now'
               : running
                 ? 'Damien is working…'
                 : `Give ${jarvis ? 'Damien a task, ' + honorific : 'Damien a task…'}`
@@ -352,6 +372,12 @@ const styles = StyleSheet.create({
   sendTxt: { color: '#fff', fontSize: 16 },
   voiceError: {
     color: theme.warn,
+    fontSize: 11,
+    textAlign: 'center',
+    paddingHorizontal: 12,
+  },
+  voiceStatus: {
+    color: theme.teal,
     fontSize: 11,
     textAlign: 'center',
     paddingHorizontal: 12,
