@@ -1,0 +1,57 @@
+# GitHub Actions CI for Damien.
+#
+# NOTE: this file lives in docs/ because the repository's GitHub App
+# connection does not currently have the `workflows` permission needed to
+# push files under .github/workflows/. To enable CI, copy (or move) this
+# file to .github/workflows/ci.yml and push — the repo owner can do this
+# with a regular admin account, or grant the workflows permission.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Typecheck & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # llama.rn's postinstall fetches native binaries from GitHub releases;
+      # CI only typechecks and runs the Node test suite, so skip it.
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+  web-demo:
+    name: Web demo bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Export web demo
+        run: npx expo export --platform web --output-dir webapp
+        env:
+          EXPO_OFFLINE: '1'
+          CI: '1'
