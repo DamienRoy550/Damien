@@ -12,3 +12,6 @@ var/
 .env
 node_modules/
 coverage/
+
+# editable installs
+*.egg-info/
