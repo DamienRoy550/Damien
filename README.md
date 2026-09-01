@@ -42,6 +42,7 @@ notification reminders, a web reader, a raw HTTP client, clipboard, deep links �
 - 📐 **Small-model engineering** — strict JSON wire protocol, grammar-constrained generation
   (GBNF / `response_format`), context trimming tuned for 2k–8k windows, step budgets with a
   forced-final-answer escape hatch.
+- 🌍 **Real internet access** — `web_search` reads actual search results and answers from them; page/API fetching rides a resilient direct→relay chain (corsproxy → allorigins → Jina reader) so it works in the browser too, where CORS would normally block it.
 - 🌐 **Opens things for real** — an embedded browser panel (native: system browser tab) means "open youtube.com", "search youtube for lofi", or "google cat facts" actually open, proactively, no URLs required.
 - 🎩 **JARVIS protocol** — courteous butler-engineer persona with dry wit, a configurable honorific ("Sir" by default), time-aware greetings, spoken replies (British voice when available) and a full self-diagnostic: just ask "run diagnostics".
 - 🎙️ **Voice I/O (web)** — tap the mic, speak your task; Damien talks back. (On-device voice comes with the native speech module on the roadmap.)
@@ -92,7 +93,8 @@ Small, permissive, phone-tested. Damien downloads GGUF files straight from Huggi
 | `unit_convert` | Length, mass, volume, speed, data, time, temperature | ✅ |
 | `datetime` | Now, date arithmetic, date differences | ✅ |
 | `save_note` / `list_notes` / `search_notes` / `delete_note` | Persistent memory across restarts | ✅ |
-| `schedule_reminder` | Local notifications at absolute or relative times | ✅ || `web_fetch` | Download a page → readable text | 🌐 |
+| `schedule_reminder` | Local notifications at absolute or relative times | ✅ || `web_search` | Search DuckDuckGo, read titles/snippets/links, answer from them | 🌐 |
+| `web_fetch` | Download a page → readable text (direct, with relay fallbacks) | 🌐 |
 | `http_request` | Call any JSON API (the "everything else" escape hatch) | 🌐 |
 | `text_stats` | Word counts, reading time, keywords | ✅ |
 | `open_website` | Open any site in the in-app browser panel (native: OS browser tab) | ✅ |

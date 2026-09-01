@@ -29,9 +29,9 @@ const NOTE_RE = /\b(?:take a note|make a note|note down|write down|remember that
 const NOTES_READ_RE = /\b(?:my notes|list notes|show notes|read (?:my )?notes|what did i (?:note|save|write)|what have i saved)\b/i;
 const TIME_RE = /\b(?:what(?:'s| is)?(?: the)? time|what(?:'s| is)?(?: the)? date|what day|current time|current date|today'?s date|what time is it)\b/i;
 const OPEN_RE = /^(?:please\s+)?(?:open|launch|start|go\s+to|visit|browse(?:\s+to)?|take\s+me\s+to)\s+(?:the\s+)?(.+?)[\s.!]*$/i;
-const SEARCH_RE = /^(?:search|look\s?up|google|find)\s+(?:for\s+)?(.+?)[\s.?!.]*$/i;
+const WEB_SEARCH_RE = /^(?:search(?:\s+the)?\s+(?:web|internet)(?:\s+for)?|look\s?up|google|find\s+info(?:rmation)?\s+about|(?:search|find))\s+(?:for\s+)?(.+?)[\s.?!.]*$/i;
 const YT_SEARCH_RE = /^(?:search\s+)?youtube\s+(?:for\s+)?(.+?)[\s.?!.]*$/i;
-const WIKI_SEARCH_RE = /^(?:search\s+)?wikipedia\s+(?:for\s+)?(.+?)[\s.?!.]*$/i;
+const WIKI_SEARCH_RE = /^(?:wikipedia)\s+(.+?)[\s.?!.]*$/i;
 const DIAGNOSTICS_RE = /\b(run\s+)?(diagnostics|self\s?-?\s?test|status\s+report|system\s+status|systems\s+check|report\s+status)\b/i;
 
 function currentHonorific(): string {
@@ -161,7 +161,7 @@ function routeMessage(task: string): string | null {
     return toolCall('Checking the clock.', 'datetime', { operation: 'now' });
   }
 
-  // Proactive search — Damien builds the URL and opens it himself.
+  // Research — Damien actually searches the web, reads the results and answers.
   const yt = YT_SEARCH_RE.exec(task.trim());
   if (yt) {
     const q = encodeURIComponent((yt[1] ?? '').trim());
@@ -171,16 +171,14 @@ function routeMessage(task: string): string | null {
   }
   const wiki = WIKI_SEARCH_RE.exec(task.trim());
   if (wiki) {
-    const q = encodeURIComponent((wiki[1] ?? '').trim());
-    return toolCall('Looking that up on Wikipedia.', 'open_website', {
-      url: `https://en.wikipedia.org/wiki/Special:Search?search=${q}`,
+    return toolCall('Researching that on the web.', 'web_search', {
+      query: `${(wiki[1] ?? '').trim()} Wikipedia`,
     });
   }
-  const search = SEARCH_RE.exec(task.trim());
-  if (search) {
-    const q = encodeURIComponent((search[1] ?? '').trim());
-    return toolCall('Searching the web for that.', 'open_website', {
-      url: `https://www.google.com/search?q=${q}`,
+  const search = WEB_SEARCH_RE.exec(task.trim());
+  if (search && !/^youtube$/i.test((search[1] ?? '').trim())) {
+    return toolCall('Searching the web — I will read the results and report back.', 'web_search', {
+      query: (search[1] ?? '').trim(),
     });
   }
 
@@ -223,6 +221,12 @@ export const demoBrain: SyncBrain = ({ messages }) => {
       return answer(
         `Diagnostic complete, ${H}:\n${observation}`,
         'Report the diagnostic verbatim.',
+      );
+    }
+    if (observation.startsWith('Top web results')) {
+      return answer(
+        `Here is what the web turned up, ${H}:\n\n${observation.replace(/^Top web results for [^:]+:/, '').trim()}\n\nSay the number and I shall open it.`,
+        'Present the research results.',
       );
     }
     const calcMatch = /=\s*(-?[\d,.]+)\s*$/.exec(observation);
@@ -298,7 +302,8 @@ export const demoBrain: SyncBrain = ({ messages }) => {
 • Reminders — "Remind me to stretch in 45 minutes"
 • Web — "Fetch https://example.com" or "open wikipedia.org"
 • Launching — "open youtube", "open com.whatsapp", "open spotify://"
-• Searching — "search youtube for lofi beats", "google cat facts", "look up quantum computing" — I open it myself, no URLs needed
+• Research — "look up quantum computing", "search the web for bitcoin news" — I read real results and answer
+• Opening — "open youtube.com", "search youtube for lofi beats" — pages and apps, no URLs needed
 • Diagnostics — "run diagnostics" for a full status report
 On a real phone I also speak my replies aloud, and every request stays on the device.`,
       'Present the repertoire.',

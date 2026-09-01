@@ -8,6 +8,7 @@ import { findModel } from './llm/models';
 import { asyncStorageKv } from './services/storage';
 import { deviceActions } from './services/device';
 import { getScheduler } from './services/scheduler';
+import { netFetch } from './services/net';
 import { setSpeechEnabled, speak, stopSpeaking } from './services/speech';
 import { useModels } from './state/models';
 import { useSettings } from './state/settings';
@@ -49,7 +50,7 @@ export async function getToolContext(): Promise<ToolContext> {
       return {
         now: () => new Date(),
         storage: asyncStorageKv,
-        fetchFn: fetch,
+        fetchFn: netFetch,
         scheduler,
         device: deviceActions,
         systemInfo: buildSystemInfo,

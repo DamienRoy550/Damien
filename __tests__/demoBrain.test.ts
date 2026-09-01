@@ -77,22 +77,41 @@ describe('demo brain speaks the wire protocol', () => {
     expect(r.arguments.url).toBe('https://www.youtube.com/results?search_query=lofi%20beats');
   });
 
-  it('proactively googles on request', () => {
+  it('googles by actually searching and reading', () => {
     const r = reply(demoBrain({ messages: user('google cat facts') }));
-    expect(r.tool).toBe('open_website');
-    expect(r.arguments.url).toBe('https://www.google.com/search?q=cat%20facts');
+    expect(r.tool).toBe('web_search');
+    expect(r.arguments.query).toBe('cat facts');
   });
 
-  it('looks things up on wikipedia', () => {
+  it('researches "wikipedia X" via web_search', () => {
     const r = reply(demoBrain({ messages: user('wikipedia quantum computing') }));
-    expect(r.tool).toBe('open_website');
-    expect(String(r.arguments.url)).toContain('en.wikipedia.org');
+    expect(r.tool).toBe('web_search');
+    expect(r.arguments.query).toBe('quantum computing Wikipedia');
   });
 
-  it('treats "look up X" as a web search', () => {
+  it('researches "look up X" via web_search and answers from results', () => {
     const r = reply(demoBrain({ messages: user('look up quantum computing') }));
-    expect(r.tool).toBe('open_website');
-    expect(String(r.arguments.url)).toContain('google.com/search');
+    expect(r.tool).toBe('web_search');
+    expect(r.arguments.query).toBe('quantum computing');
+  });
+
+  it('researches explicit web searches', () => {
+    const r = reply(demoBrain({ messages: user('search the web for bitcoin price news') }));
+    expect(r.tool).toBe('web_search');
+    expect(r.arguments.query).toBe('bitcoin price news');
+  });
+
+  it('presents research results with the honorific', () => {
+    const a = answer(
+      demoBrain({
+        messages: [
+          { role: 'user', content: 'look up cat facts' },
+          { role: 'user', content: '[OBSERVATION] Top web results for "cat facts":\n1. Cats\n   https://cats.example' },
+        ],
+      }),
+    );
+    expect(a.answer).toContain('Here is what the web turned up');
+    expect(a.answer).toContain('open');
   });
 
   it('routes "open <app>" to open_app', () => {

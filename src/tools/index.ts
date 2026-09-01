@@ -5,6 +5,7 @@ import { unitConvert } from './builtin/unitConvert';
 import { dateTime } from './builtin/dateTime';
 import { createNoteTools } from './builtin/notes';
 import { webFetch } from './builtin/webFetch';
+import { webSearch } from './builtin/webSearch';
 import { httpRequest } from './builtin/httpRequest';
 import { createReminderTool } from './builtin/reminder';
 import { textStats } from './builtin/textStats';
@@ -22,6 +23,7 @@ export function createDefaultRegistry(ctx: ToolContext): ToolRegistry {
   registry.register(unitConvert);
   registry.register(dateTime);
   for (const t of createNoteTools()) registry.register(t);
+  registry.register(webSearch);
   registry.register(webFetch);
   registry.register(httpRequest);
   registry.register(textStats);
