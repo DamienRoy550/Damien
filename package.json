@@ -1,0 +1,17 @@
+{
+  "name": "damien-voice-ai",
+  "version": "1.0.0",
+  "description": "A voice AI that hears you and replies out loud, in your browser.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
