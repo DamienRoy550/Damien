@@ -219,4 +219,20 @@ body {
   font-size: 15px;
   margin-top: 6px;
 }
+.copylink {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  word-break: break-all;
+}
+.copylink:active { transform: scale(0.98); }
+
 .hidden { display: none; }

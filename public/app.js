@@ -21,6 +21,14 @@
     window.SpeechRecognition || window.webkitSpeechRecognition;
   const synth = window.speechSynthesis;
 
+  // Platform detection
+  const ua = navigator.userAgent;
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isSafari = /^((?!chrome|android|crios|fxios|edgios).)*safari/i.test(ua);
+  const iosNonSafari = isIOS && !isSafari;
+
   const history = [];
   let recognition = null;
   let listening = false;
@@ -254,10 +262,32 @@
     });
   }
 
-  // ---------- Boot ----------
-  if (!SpeechRecognition) {
+  function addCopyLinkButton() {
+    const box = els.unsupported.querySelector(".typebox");
+    if (!box) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "copylink";
+    btn.textContent = "📋 Copy link for Safari";
+    btn.addEventListener("click", async () => {
+      const url = location.href;
+      try {
+        await navigator.clipboard.writeText(url);
+        btn.textContent = "✓ Copied — now paste it in Safari";
+      } catch (_) {
+        btn.textContent = url;
+        const r = document.createRange();
+        r.selectNodeContents(btn);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+    });
+    box.parentNode.insertBefore(btn, box);
+  }
+
+  function showUnsupported() {
     els.unsupported.classList.remove("hidden");
-    setStatus("Voice input isn't supported in this browser — you can type instead.");
     els.micBtn.disabled = true;
     els.micBtn.style.opacity = "0.5";
     els.micBtn.style.cursor = "not-allowed";
@@ -266,9 +296,33 @@
       synth.onvoiceschanged = loadVoices;
     }
     initTypeFallback();
+  }
+
+  // ---------- Boot ----------
+  if (iosNonSafari) {
+    // iOS blocks speech recognition in every browser except Safari.
+    const title = document.getElementById("unsupportedTitle");
+    const body = document.getElementById("unsupportedBody");
+    if (title) title.textContent = "On iPhone, voice needs Safari 🧭";
+    if (body) {
+      body.innerHTML =
+        "Apple only lets microphone speech recognition work in <strong>Safari</strong> on iPhone — " +
+        "Chrome and other iOS browsers are blocked from it by iOS itself. " +
+        "To talk to Damien, open this page in <strong>Safari</strong>. " +
+        "The button below copies the link so you can paste it into Safari.";
+    }
+    setStatus("Open in Safari to talk — or type to Damien below.");
+    addCopyLinkButton();
+    showUnsupported();
+  } else if (!SpeechRecognition) {
+    setStatus("Voice input isn't supported in this browser — you can type instead.");
+    showUnsupported();
   } else {
     initVoiceUI();
     initTypeFallback(); // typing always works as a bonus
+    if (isIOS && isSafari) {
+      setStatus("Tap the mic and allow microphone access to talk.");
+    }
   }
 
   // Greet on first interaction so the browser allows audio.
